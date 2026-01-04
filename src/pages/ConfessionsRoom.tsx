@@ -6,8 +6,27 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { NeonCard } from "@/components/ui/neon-card"; // Assuming this exists or I'll standard card
-import { GlassCard } from "@/components/ui/glass-card"; // Fallback
+import { GlassCard } from "@/components/ui/glass-card";
+// NeonCard fallback
+function NeonCard({
+    children,
+    className = "",
+}: {
+    children: React.ReactNode;
+    className?: string;
+}) {
+    return (
+        <div
+            className={cn(
+                "rounded-2xl border border-rose-500/25 bg-black overflow-hidden",
+                "shadow-[0_0_22px_rgba(244,63,94,0.14),0_0_52px_rgba(59,130,246,0.08)]",
+                className
+            )}
+        >
+            {children}
+        </div>
+    );
+}
 
 // Types matching DB
 type ConfTier = "Soft" | "Spicy" | "Dirty" | "Dark" | "Forbidden";
@@ -43,7 +62,7 @@ const TIER_META: Record<ConfTier, { label: string; tone: string }> = {
 export default function ConfessionsRoom() {
     const { creatorId } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, role } = useAuth();
 
     const [loading, setLoading] = useState(true);
     const [creator, setCreator] = useState<CreatorProfile | null>(null);
@@ -66,10 +85,14 @@ export default function ConfessionsRoom() {
     ];
 
     useEffect(() => {
+        if (role === 'creator') {
+            navigate('/confessions-studio');
+            return;
+        }
         if (creatorId) {
             fetchRoomData();
         }
-    }, [creatorId, user]);
+    }, [creatorId, user, role]);
 
     const fetchRoomData = async () => {
         try {
@@ -86,8 +109,8 @@ export default function ConfessionsRoom() {
             setCreator(creatorData);
 
             // 2. Fetch Active Confessions
-            const { data: confData, error: confError } = await supabase
-                .from("confessions")
+            const { data: confData, error: confError } = await (supabase
+                .from("confessions" as any) as any)
                 .select("*")
                 .eq("creator_id", creatorId)
                 .eq("status", "active")
@@ -98,14 +121,14 @@ export default function ConfessionsRoom() {
 
             // 3. Fetch My Unlocks
             if (user) {
-                const { data: unlocks, error: unlockError } = await supabase
-                    .from("confession_unlocks")
+                const { data: unlocks, error: unlockError } = await (supabase
+                    .from("confession_unlocks" as any) as any)
                     .select("confession_id")
                     .eq("fan_id", user.id);
 
                 if (unlockError) throw unlockError;
 
-                const unlockedSet = new Set(unlocks?.map(u => u.confession_id) || []);
+                const unlockedSet = new Set((unlocks?.map((u: any) => u.confession_id) || []) as string[]);
                 setUnlockedIds(unlockedSet);
             }
 
@@ -127,8 +150,8 @@ export default function ConfessionsRoom() {
             // In a real app, we'd check wallet balance here first
             // For this demo, we just insert the unlock record
 
-            const { error } = await supabase
-                .from("confession_unlocks")
+            const { error } = await (supabase
+                .from("confession_unlocks" as any) as any)
                 .insert({
                     fan_id: user.id,
                     confession_id: confession.id,

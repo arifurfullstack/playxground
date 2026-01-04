@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Sparkles, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,7 +29,7 @@ function toneClasses(tone: "pink" | "green" | "purple" | "red" | "blue" | "yello
 
 // ---- Main Component ----
 export default function FlashDropsCreatorRoom() {
-    const navigate = useNavigate();
+
 
     type DropKind = "Photo Set" | "Video" | "Live Replay" | "DM Pack" | "Vault";
     type Rarity = "Common" | "Rare" | "Epic" | "Legendary";
@@ -50,13 +50,16 @@ export default function FlashDropsCreatorRoom() {
     };
 
     const creator = { handle: "@NovaHeat", level: "Star" as const };
-    const { user, role } = useAuth();
+    const { user, role, loading: authLoading } = useAuth();
+    const navigate = useNavigate();
 
     useEffect(() => {
-        if (user && role !== 'creator') {
+        if (!authLoading && (!user || role !== 'creator')) {
             navigate('/discover?category=Flash Drops');
         }
-    }, [user, role]);
+    }, [user, role, authLoading]);
+
+    if (authLoading) return null;
 
     const [toast, setToast] = useState<string | null>(null);
     const [selected, setSelected] = useState<string>("d3");
@@ -200,13 +203,13 @@ export default function FlashDropsCreatorRoom() {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => navigate("/home-mock")}
+                            onClick={() => navigate("/")}
                             className="p-2 hover:bg-white/10 rounded-full transition border border-white/10"
                         >
                             <ArrowLeft className="w-6 h-6" />
                         </button>
                         <button
-                            onClick={() => navigate(`/flash-drops/${creator.handle.replace('@', '')}`)}
+                            onClick={() => navigate(`/flash-drops/${user?.id}`)}
                             className="rounded-xl border border-blue-500/25 bg-black/40 px-3 py-2 text-sm text-blue-200 hover:bg-white/5 inline-flex items-center gap-2"
                             title="Switch to Fan room preview"
                         >

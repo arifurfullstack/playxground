@@ -5,7 +5,7 @@ import { GlassCard } from '@/components/ui/glass-card';
 import { NeonButton } from '@/components/ui/neon-button';
 import { NeonInput } from '@/components/ui/neon-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Lock, Heart, DollarSign, Users, BadgeCheck, ImageIcon, Send, MessageCircle } from 'lucide-react';
+import { Lock, Heart, DollarSign, Users, BadgeCheck, ImageIcon, Send, MessageCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -153,7 +153,7 @@ export default function CreatorProfilePage() {
 
   const handleSubscribe = async () => {
     if (!user || !creator) return;
-    
+
     if (!myProfile || myProfile.wallet_balance < creator.subscription_price) {
       toast.error('Insufficient balance. Please top up your wallet!');
       return;
@@ -225,7 +225,7 @@ export default function CreatorProfilePage() {
 
   const handleTip = async () => {
     if (!user || !creator) return;
-    
+
     const amount = parseFloat(tipAmount);
     if (isNaN(amount) || amount <= 0) {
       toast.error('Please enter a valid tip amount');
@@ -311,8 +311,8 @@ export default function CreatorProfilePage() {
             <div className="relative">
               <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-neon-pink to-neon-purple flex items-center justify-center text-2xl sm:text-3xl md:text-4xl font-bold border-4 border-neon-pink/50 shadow-lg shadow-neon-pink/30">
                 {creator.avatar_url ? (
-                  <img 
-                    src={creator.avatar_url} 
+                  <img
+                    src={creator.avatar_url}
                     alt={creator.display_name || creator.username}
                     className="w-full h-full rounded-full object-cover"
                   />
@@ -338,7 +338,7 @@ export default function CreatorProfilePage() {
                 )}
               </div>
               <p className="text-sm sm:text-base text-neon-pink mb-2 sm:mb-4">@{creator.username}</p>
-              
+
               {creator.bio && (
                 <p className="text-sm sm:text-base text-muted-foreground mb-3 sm:mb-4 max-w-lg mx-auto md:mx-0">{creator.bio}</p>
               )}
@@ -367,8 +367,8 @@ export default function CreatorProfilePage() {
                       Subscribed
                     </NeonButton>
                   ) : (
-                    <NeonButton 
-                      variant="filled" 
+                    <NeonButton
+                      variant="filled"
                       size="md"
                       className="w-full sm:w-auto text-sm sm:text-base"
                       onClick={handleSubscribe}
@@ -379,8 +379,8 @@ export default function CreatorProfilePage() {
                     </NeonButton>
                   )}
                   <div className="flex gap-2 sm:gap-3 md:gap-4 w-full sm:w-auto">
-                    <NeonButton 
-                      variant="yellow" 
+                    <NeonButton
+                      variant="yellow"
                       size="md"
                       className="flex-1 sm:flex-none"
                       onClick={() => setTipDialogOpen(true)}
@@ -388,8 +388,8 @@ export default function CreatorProfilePage() {
                       <Heart className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
                       Tip
                     </NeonButton>
-                    <NeonButton 
-                      variant="cyan" 
+                    <NeonButton
+                      variant="cyan"
                       size="md"
                       className="flex-1 sm:flex-none"
                       onClick={handleStartConversation}
@@ -397,6 +397,15 @@ export default function CreatorProfilePage() {
                     >
                       <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
                       {startingConversation ? 'Opening...' : 'Message'}
+                    </NeonButton>
+                    <NeonButton
+                      variant="purple"
+                      size="md"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => navigate(`/flash-drops/${creator.id}`)}
+                    >
+                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+                      Flash Drops
                     </NeonButton>
                   </div>
                 </div>
@@ -422,17 +431,17 @@ export default function CreatorProfilePage() {
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
             {posts.map((post) => {
               const canView = !post.is_locked || isSubscribed || isOwnProfile;
-              
+
               return (
-                <div 
-                  key={post.id} 
+                <div
+                  key={post.id}
                   className="relative aspect-square rounded-xl overflow-hidden group"
                 >
                   {/* Post Background */}
                   <div className={`absolute inset-0 bg-gradient-to-br from-neon-pink/30 to-neon-purple/30 ${!canView ? 'blur-xl' : ''}`}>
                     {post.content_url ? (
-                      <img 
-                        src={post.content_url} 
+                      <img
+                        src={post.content_url}
                         alt={post.title || 'Post'}
                         className={`w-full h-full object-cover ${!canView ? 'blur-xl scale-110' : ''}`}
                       />
@@ -450,8 +459,8 @@ export default function CreatorProfilePage() {
                     <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center">
                       <Lock className="w-8 h-8 text-neon-pink mb-2" />
                       <p className="text-xs text-muted-foreground mb-2">Subscribers only</p>
-                      <NeonButton 
-                        variant="pink" 
+                      <NeonButton
+                        variant="pink"
                         size="sm"
                         onClick={handleSubscribe}
                         disabled={subscribing}
@@ -499,17 +508,16 @@ export default function CreatorProfilePage() {
                   <button
                     key={amount}
                     onClick={() => setTipAmount(amount.toString())}
-                    className={`flex-1 py-3 rounded-lg border transition-all ${
-                      tipAmount === amount.toString()
+                    className={`flex-1 py-3 rounded-lg border transition-all ${tipAmount === amount.toString()
                         ? 'border-neon-pink bg-neon-pink/20 text-neon-pink'
                         : 'border-border hover:border-neon-pink/50 text-muted-foreground'
-                    }`}
+                      }`}
                   >
                     ${amount}
                   </button>
                 ))}
               </div>
-              
+
               <NeonInput
                 value={tipAmount}
                 onChange={(e) => setTipAmount(e.target.value)}
@@ -523,9 +531,9 @@ export default function CreatorProfilePage() {
                 Your balance: <span className="neon-text-cyan">${myProfile?.wallet_balance.toFixed(2) || '0.00'}</span>
               </p>
 
-              <NeonButton 
-                variant="filled" 
-                className="w-full" 
+              <NeonButton
+                variant="filled"
+                className="w-full"
                 onClick={handleTip}
                 disabled={tipping}
               >

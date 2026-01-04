@@ -42,7 +42,7 @@ function NeonCard({
 export default function XChatRoom() {
     const { creatorId } = useParams();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const [lane, setLane] = useState<"Priority" | "Paid" | "Free">("Free");
     const [msg, setMsg] = useState("");
     const [amount, setAmount] = useState(5);
@@ -53,6 +53,10 @@ export default function XChatRoom() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (role === 'creator') {
+            navigate('/xchat-creator');
+            return;
+        }
         fetchData();
         const channel = supabase
             .channel('x_chat_fan_updates')
@@ -67,7 +71,7 @@ export default function XChatRoom() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [creatorId]);
+    }, [creatorId, role]);
 
     const fetchData = async () => {
         try {
@@ -80,8 +84,8 @@ export default function XChatRoom() {
             setCreator(creatorData);
 
             // 2. Fetch Room
-            const { data: roomData } = await supabase
-                .from('x_chat_rooms')
+            const { data: roomData } = await (supabase
+                .from('x_chat_rooms' as any) as any)
                 .select('*')
                 .eq('creator_id', creatorId)
                 .maybeSingle();

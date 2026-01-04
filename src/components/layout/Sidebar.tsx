@@ -40,25 +40,25 @@ export function Sidebar({ className, onLinkClick }: SidebarProps) {
     {
       icon: Sparkles,
       label: 'Flash Drops',
-      href: isCreator ? '/flash-drops-creator' : '/discover?category=Flash Drops',
+      href: isCreator ? '/flash-drops-creator' : `/flash-drops/${profile?.id || 'guest'}`,
       color: 'text-neon-cyan'
     },
     {
       icon: MessageCircle,
       label: 'Confessions',
-      href: isCreator ? '/confessions-studio' : '/discover?category=Confessions',
+      href: isCreator ? '/confessions-studio' : `/confessions/${profile?.id || 'guest'}`,
       color: 'text-neon-pink'
     },
     {
       icon: MessageSquare,
       label: 'X Chat',
-      href: isCreator ? '/xchat-creator' : '/discover?category=X Chat',
+      href: isCreator ? '/xchat-creator' : `/x-chat/${profile?.id || 'guest'}`,
       color: 'text-neon-yellow'
     },
     {
       icon: Wine,
       label: 'Bar Lounge',
-      href: isCreator ? `/bar-lounge/${profile?.id || 'guest'}` : '/discover?category=Bar Lounge',
+      href: `/bar-lounge/${profile?.id || 'guest'}`,
       color: 'text-neon-purple'
     },
     { icon: Gamepad2, label: 'Games', href: '/games', color: 'text-neon-cyan' },

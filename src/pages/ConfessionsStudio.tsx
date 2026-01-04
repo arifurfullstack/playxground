@@ -6,8 +6,28 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { NeonCard } from "@/components/ui/neon-card"; // Fallback to standard div if needed but preferred
 import { GlassCard } from "@/components/ui/glass-card";
+
+// NeonCard fallback
+function NeonCard({
+    children,
+    className = "",
+}: {
+    children: React.ReactNode;
+    className?: string;
+}) {
+    return (
+        <div
+            className={cn(
+                "rounded-2xl border border-rose-500/25 bg-black overflow-hidden",
+                "shadow-[0_0_22px_rgba(244,63,94,0.14),0_0_52px_rgba(59,130,246,0.08)]",
+                className
+            )}
+        >
+            {children}
+        </div>
+    );
+}
 
 // Types
 type ConfTier = "Soft" | "Spicy" | "Dirty" | "Dark" | "Forbidden";
@@ -38,7 +58,7 @@ const TIER_META: Record<ConfTier, { price: number; tone: string }> = {
 
 export default function ConfessionsStudio() {
     const navigate = useNavigate();
-    const { user, role } = useAuth();
+    const { user, role, loading: authLoading } = useAuth();
 
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState<ConfessionItem[]>([]);
@@ -54,20 +74,22 @@ export default function ConfessionsStudio() {
     const [fileName, setFileName] = useState<string | null>(null); // For mock file upload
 
     useEffect(() => {
-        if (user) {
-            if (role !== 'creator') {
+        if (!authLoading) {
+            if (!user || role !== 'creator') {
                 navigate('/discover?category=Confessions');
                 return;
             }
             fetchItems();
         }
-    }, [user, role]);
+    }, [user, role, authLoading]);
+
+    if (authLoading) return null;
 
     const fetchItems = async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from("confessions")
+            const { data, error } = await (supabase
+                .from("confessions" as any) as any)
                 .select("*")
                 .eq("creator_id", user?.id)
                 .order("created_at", { ascending: false });
@@ -139,14 +161,14 @@ export default function ConfessionsStudio() {
 
             let error;
             if (editingId) {
-                const { error: upError } = await supabase
-                    .from("confessions")
+                const { error: upError } = await (supabase
+                    .from("confessions" as any) as any)
                     .update(payload)
                     .eq("id", editingId);
                 error = upError;
             } else {
-                const { error: insError } = await supabase
-                    .from("confessions")
+                const { error: insError } = await (supabase
+                    .from("confessions" as any) as any)
                     .insert(payload);
                 error = insError;
             }
@@ -167,8 +189,8 @@ export default function ConfessionsStudio() {
 
     const handleDuplicate = async (item: ConfessionItem) => {
         try {
-            const { error } = await supabase
-                .from("confessions")
+            const { error } = await (supabase
+                .from("confessions" as any) as any)
                 .insert({
                     creator_id: user?.id,
                     title: `${item.title} (Copy)`,
@@ -190,8 +212,8 @@ export default function ConfessionsStudio() {
 
     const handleArchive = async (id: string) => {
         try {
-            const { error } = await supabase
-                .from("confessions")
+            const { error } = await (supabase
+                .from("confessions" as any) as any)
                 .update({ status: 'Archived' })
                 .eq("id", id);
 

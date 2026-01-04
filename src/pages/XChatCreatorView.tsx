@@ -52,7 +52,7 @@ type Msg = {
 
 export default function XChatCreatorView() {
     const navigate = useNavigate();
-    const { user, role } = useAuth();
+    const { user, role, loading: authLoading } = useAuth();
     const [lane, setLane] = useState<Lane>("Priority");
     const [replyTo, setReplyTo] = useState<string | null>(null);
     const [reply, setReply] = useState("");
@@ -62,9 +62,9 @@ export default function XChatCreatorView() {
     const [room, setRoom] = useState<any>(null);
 
     useEffect(() => {
-        if (!user) return;
+        if (authLoading) return;
 
-        if (role !== 'creator') {
+        if (!user || role !== 'creator') {
             navigate('/discover?category=X Chat');
             return;
         }
@@ -82,7 +82,9 @@ export default function XChatCreatorView() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user, role]);
+    }, [user, role, authLoading]);
+
+    if (authLoading) return null;
 
     const fetchRoomAndMessages = async () => {
         try {
@@ -223,7 +225,7 @@ export default function XChatCreatorView() {
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => navigate("/home-mock")}
+                            onClick={() => navigate("/")}
                             className="p-2 hover:bg-white/10 rounded-full transition border border-white/10"
                         >
                             <ArrowLeft className="w-6 h-6" />

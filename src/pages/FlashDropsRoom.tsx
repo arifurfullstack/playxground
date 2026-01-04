@@ -6,6 +6,7 @@ import {
     Trophy, ChevronRight, Timer, DollarSign
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -41,7 +42,7 @@ interface LeaderboardEntry {
 export default function FlashDropsRoom() {
     const { creatorId } = useParams();
     const navigate = useNavigate();
-    const [user, setUser] = useState<any>(null);
+    const { user, role } = useAuth();
     const [drops, setDrops] = useState<FlashDrop[]>([]);
     const [selectedDropId, setSelectedDropId] = useState<string | null>(null);
     const [auction, setAuction] = useState<Auction | null>(null);
@@ -54,16 +55,14 @@ export default function FlashDropsRoom() {
     const [entitlements, setEntitlements] = useState<Set<string>>(new Set());
 
     useEffect(() => {
-        fetchUser();
+        if (role === 'creator') {
+            navigate('/flash-drops-creator');
+            return;
+        }
         fetchData();
         const interval = setInterval(fetchData, 15000); // Polling for updates
         return () => clearInterval(interval);
-    }, [creatorId]);
-
-    const fetchUser = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-    };
+    }, [creatorId, role]);
 
     const fetchData = async () => {
         if (!creatorId) return;
