@@ -58,7 +58,8 @@ const App = () => (
           <AuthProvider>
             <NotificationProvider>
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<HomeMock />} />
+                <Route path="/explore" element={<Feed />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/feed" element={<Feed />} />
@@ -89,7 +90,7 @@ const App = () => (
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/games/truth-or-dare" element={<TruthOrDareRoom />} />
                 <Route path="/games/truth-or-dare/:id" element={<TruthOrDareRoom />} />
-                <Route path="/home-mock" element={<HomeMock />} />
+
                 <Route path="/confessions/:creatorId" element={<ConfessionsRoom />} />
                 <Route path="/confessions-studio" element={<ConfessionsStudio />} />
                 <Route path="/flash-drops/:creatorId" element={<FlashDropsRoom />} />

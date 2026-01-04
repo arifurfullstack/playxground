@@ -38,7 +38,7 @@ const TIER_META: Record<ConfTier, { price: number; tone: string }> = {
 
 export default function ConfessionsStudio() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, role } = useAuth();
 
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState<ConfessionItem[]>([]);
@@ -55,9 +55,13 @@ export default function ConfessionsStudio() {
 
     useEffect(() => {
         if (user) {
+            if (role !== 'creator') {
+                navigate('/discover?category=Confessions');
+                return;
+            }
             fetchItems();
         }
-    }, [user]);
+    }, [user, role]);
 
     const fetchItems = async () => {
         try {

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Sparkles, ChevronDown } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ---- Helpers (replicated from HomeMock for consistency) ----
 function cx(...parts: Array<string | false | null | undefined>) {
@@ -49,6 +50,13 @@ export default function FlashDropsCreatorRoom() {
     };
 
     const creator = { handle: "@NovaHeat", level: "Star" as const };
+    const { user, role } = useAuth();
+
+    useEffect(() => {
+        if (user && role !== 'creator') {
+            navigate('/discover?category=Flash Drops');
+        }
+    }, [user, role]);
 
     const [toast, setToast] = useState<string | null>(null);
     const [selected, setSelected] = useState<string>("d3");

@@ -52,7 +52,7 @@ type Msg = {
 
 export default function XChatCreatorView() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, role } = useAuth();
     const [lane, setLane] = useState<Lane>("Priority");
     const [replyTo, setReplyTo] = useState<string | null>(null);
     const [reply, setReply] = useState("");
@@ -63,6 +63,12 @@ export default function XChatCreatorView() {
 
     useEffect(() => {
         if (!user) return;
+
+        if (role !== 'creator') {
+            navigate('/discover?category=X Chat');
+            return;
+        }
+
         fetchRoomAndMessages();
 
         // Subscribe to new messages
@@ -76,13 +82,13 @@ export default function XChatCreatorView() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user]);
+    }, [user, role]);
 
     const fetchRoomAndMessages = async () => {
         try {
             // 1. Get or create room for this creator
-            let { data: roomData, error: roomError } = await supabase
-                .from('x_chat_rooms')
+            let { data: roomData, error: roomError } = await (supabase
+                .from('x_chat_rooms' as any) as any)
                 .select('*')
                 .eq('creator_id', user?.id)
                 .maybeSingle();

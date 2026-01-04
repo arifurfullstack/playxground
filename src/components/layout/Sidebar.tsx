@@ -19,22 +19,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-const navItems = [
-  { icon: Home, label: 'Home', href: '/feed', color: 'text-neon-pink' },
-  { icon: Search, label: 'Discover', href: '/discover', color: 'text-neon-green' },
-  { icon: Sparkles, label: 'Flash Drops', href: '/discover?category=Flash Drops', color: 'text-neon-cyan' },
-  { icon: MessageCircle, label: 'Confessions', href: '/discover?category=Confessions', color: 'text-neon-pink' },
-  { icon: MessageSquare, label: 'X Chat', href: '/discover?category=X Chat', color: 'text-neon-yellow' },
-  { icon: Wine, label: 'Bar Lounge', href: '/discover?category=Bar Lounge', color: 'text-neon-purple' },
-  { icon: Gamepad2, label: 'Games', href: '/games', color: 'text-neon-cyan' },
-  { icon: Gamepad2, label: 'Truth or Dare', href: '/games/truth-or-dare', color: 'text-neon-cyan' },
-  { icon: Heart, label: 'Suga 4 U', href: '/suga4u', color: 'text-neon-pink' },
-  { icon: MessageSquare, label: 'Messages', href: '/messages', color: 'text-neon-yellow' },
-  { icon: Bell, label: 'Notifications', href: '/notifications', color: 'text-neon-orange' },
-  { icon: Trophy, label: 'Leaderboard', href: '/leaderboard', color: 'text-neon-green' },
-  { icon: Wallet, label: 'Wallet', href: '/wallet', color: 'text-neon-purple' },
-  { icon: Search, label: 'Home Mock', href: '/home-mock', color: 'text-neon-cyan' },
-];
+
 
 interface SidebarProps {
   className?: string;
@@ -46,6 +31,45 @@ export function Sidebar({ className, onLinkClick }: SidebarProps) {
   const navigate = useNavigate();
   const { profile, role, signOut } = useAuth();
   const { unreadMessageCount } = useNotification();
+
+  const isCreator = role === 'creator';
+
+  const navItems = [
+    { icon: Home, label: 'Home', href: '/', color: 'text-neon-pink' },
+    { icon: Search, label: 'Explore', href: '/explore', color: 'text-neon-green' },
+    {
+      icon: Sparkles,
+      label: 'Flash Drops',
+      href: isCreator ? '/flash-drops-creator' : '/discover?category=Flash Drops',
+      color: 'text-neon-cyan'
+    },
+    {
+      icon: MessageCircle,
+      label: 'Confessions',
+      href: isCreator ? '/confessions-studio' : '/discover?category=Confessions',
+      color: 'text-neon-pink'
+    },
+    {
+      icon: MessageSquare,
+      label: 'X Chat',
+      href: isCreator ? '/xchat-creator' : '/discover?category=X Chat',
+      color: 'text-neon-yellow'
+    },
+    {
+      icon: Wine,
+      label: 'Bar Lounge',
+      href: isCreator ? `/bar-lounge/${profile?.id || 'guest'}` : '/discover?category=Bar Lounge',
+      color: 'text-neon-purple'
+    },
+    { icon: Gamepad2, label: 'Games', href: '/games', color: 'text-neon-cyan' },
+    { icon: Gamepad2, label: 'Truth or Dare', href: '/games/truth-or-dare', color: 'text-neon-cyan' },
+    { icon: Heart, label: 'Suga 4 U', href: '/suga4u', color: 'text-neon-pink' },
+    { icon: MessageSquare, label: 'Messages', href: '/messages', color: 'text-neon-yellow' },
+    { icon: Bell, label: 'Notifications', href: '/notifications', color: 'text-neon-orange' },
+    { icon: Trophy, label: 'Leaderboard', href: '/leaderboard', color: 'text-neon-green' },
+    { icon: Wallet, label: 'Wallet', href: '/wallet', color: 'text-neon-purple' },
+
+  ];
 
   const handleLogout = async () => {
     await signOut();
