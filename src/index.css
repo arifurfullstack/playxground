@@ -1,0 +1,274 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LustX Design System - Neon Cyberpunk Theme */
+
+@layer base {
+  :root {
+    /* Light theme - Core backgrounds */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
+    
+    /* Cards */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    
+    /* Primary - Neon Pink (slightly adjusted for light) */
+    --primary: 300 85% 45%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary */
+    --secondary: 0 0% 94%;
+    --secondary-foreground: 0 0% 15%;
+    
+    /* Muted */
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 45%;
+    
+    /* Accent - Neon Cyan (adjusted for light) */
+    --accent: 180 85% 40%;
+    --accent-foreground: 0 0% 100%;
+    
+    /* Destructive */
+    --destructive: 0 84% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Borders */
+    --border: 0 0% 85%;
+    --input: 0 0% 90%;
+    --ring: 300 85% 45%;
+    
+    --radius: 0.75rem;
+    
+    /* Sidebar */
+    --sidebar-background: 0 0% 96%;
+    --sidebar-foreground: 0 0% 15%;
+    --sidebar-primary: 300 85% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 92%;
+    --sidebar-accent-foreground: 0 0% 15%;
+    --sidebar-border: 0 0% 88%;
+    --sidebar-ring: 300 85% 45%;
+    
+    /* Custom neon colors (light mode versions) */
+    --neon-pink: 300 85% 45%;
+    --neon-cyan: 180 85% 35%;
+    --neon-yellow: 45 95% 45%;
+    --neon-green: 140 80% 35%;
+    --neon-purple: 270 80% 50%;
+    --neon-orange: 25 95% 50%;
+    
+    /* Gradients */
+    --gradient-pink-glow: 0 0 40px hsl(300 85% 45% / 0.25);
+    --gradient-cyan-glow: 0 0 40px hsl(180 85% 35% / 0.25);
+  }
+
+  .dark {
+    /* Dark theme */
+    --background: 0 0% 4%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 300 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 180 100% 50%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 15%;
+    --ring: 300 100% 50%;
+    --sidebar-background: 0 0% 6%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 300 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: 300 100% 50%;
+    --neon-pink: 300 100% 50%;
+    --neon-cyan: 180 100% 50%;
+    --neon-yellow: 50 100% 60%;
+    --neon-green: 140 100% 50%;
+    --neon-purple: 270 100% 60%;
+    --neon-orange: 30 100% 55%;
+    --gradient-pink-glow: 0 0 40px hsl(300 100% 50% / 0.4);
+    --gradient-cyan-glow: 0 0 40px hsl(180 100% 50% / 0.4);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background: linear-gradient(180deg, hsl(0 0% 4%) 0%, hsl(0 0% 2%) 100%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* Glassmorphism card */
+  .glass-card {
+    @apply bg-card/60 backdrop-blur-xl border border-border/50 rounded-xl;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+  
+  /* Neon border variants */
+  .neon-border-pink {
+    border: 1px solid hsl(var(--neon-pink) / 0.5);
+    box-shadow: 0 0 10px hsl(var(--neon-pink) / 0.3), inset 0 0 10px hsl(var(--neon-pink) / 0.1);
+  }
+  
+  .neon-border-cyan {
+    border: 1px solid hsl(var(--neon-cyan) / 0.5);
+    box-shadow: 0 0 10px hsl(var(--neon-cyan) / 0.3), inset 0 0 10px hsl(var(--neon-cyan) / 0.1);
+  }
+  
+  .neon-border-green {
+    border: 1px solid hsl(var(--neon-green) / 0.5);
+    box-shadow: 0 0 10px hsl(var(--neon-green) / 0.3), inset 0 0 10px hsl(var(--neon-green) / 0.1);
+  }
+  
+  .neon-border-yellow {
+    border: 1px solid hsl(var(--neon-yellow) / 0.5);
+    box-shadow: 0 0 10px hsl(var(--neon-yellow) / 0.3), inset 0 0 10px hsl(var(--neon-yellow) / 0.1);
+  }
+  
+  .neon-border-purple {
+    border: 1px solid hsl(var(--neon-purple) / 0.5);
+    box-shadow: 0 0 10px hsl(var(--neon-purple) / 0.3), inset 0 0 10px hsl(var(--neon-purple) / 0.1);
+  }
+  
+  /* Neon text glow */
+  .neon-text-pink {
+    color: hsl(var(--neon-pink));
+    text-shadow: 0 0 10px hsl(var(--neon-pink) / 0.8), 0 0 20px hsl(var(--neon-pink) / 0.6), 0 0 30px hsl(var(--neon-pink) / 0.4);
+  }
+  
+  .neon-text-cyan {
+    color: hsl(var(--neon-cyan));
+    text-shadow: 0 0 10px hsl(var(--neon-cyan) / 0.8), 0 0 20px hsl(var(--neon-cyan) / 0.6), 0 0 30px hsl(var(--neon-cyan) / 0.4);
+  }
+  
+  .neon-text-yellow {
+    color: hsl(var(--neon-yellow));
+    text-shadow: 0 0 10px hsl(var(--neon-yellow) / 0.8), 0 0 20px hsl(var(--neon-yellow) / 0.6);
+  }
+  
+  .neon-text-green {
+    color: hsl(var(--neon-green));
+    text-shadow: 0 0 10px hsl(var(--neon-green) / 0.8), 0 0 20px hsl(var(--neon-green) / 0.6);
+  }
+  
+  .neon-text-purple {
+    color: hsl(var(--neon-purple));
+    text-shadow: 0 0 10px hsl(var(--neon-purple) / 0.8), 0 0 20px hsl(var(--neon-purple) / 0.6);
+  }
+  
+  .neon-text-orange {
+    color: hsl(var(--neon-orange));
+    text-shadow: 0 0 10px hsl(var(--neon-orange) / 0.8), 0 0 20px hsl(var(--neon-orange) / 0.6);
+  }
+  
+  /* Neon button glow effect */
+  .neon-glow-pink {
+    box-shadow: 0 0 5px hsl(var(--neon-pink)), 0 0 20px hsl(var(--neon-pink) / 0.5), 0 0 40px hsl(var(--neon-pink) / 0.3);
+  }
+  
+  .neon-glow-cyan {
+    box-shadow: 0 0 5px hsl(var(--neon-cyan)), 0 0 20px hsl(var(--neon-cyan) / 0.5), 0 0 40px hsl(var(--neon-cyan) / 0.3);
+  }
+  
+  /* Logo style */
+  .logo-text {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  
+  /* Heading font */
+  .font-display {
+    font-family: 'Orbitron', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Pulse animation for neon elements */
+  .animate-neon-pulse {
+    animation: neon-pulse 2s ease-in-out infinite alternate;
+  }
+  
+  @keyframes neon-pulse {
+    from {
+      opacity: 0.8;
+      filter: brightness(1);
+    }
+    to {
+      opacity: 1;
+      filter: brightness(1.2);
+    }
+  }
+  
+  /* Card flip animation */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+  
+  /* Gradient backgrounds */
+  .bg-gradient-radial-pink {
+    background: radial-gradient(ellipse at center, hsl(var(--neon-pink) / 0.15) 0%, transparent 70%);
+  }
+  
+  .bg-gradient-radial-cyan {
+    background: radial-gradient(ellipse at center, hsl(var(--neon-cyan) / 0.15) 0%, transparent 70%);
+  }
+
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border) / 0.3);
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--border) / 0.6);
+  }
+}
