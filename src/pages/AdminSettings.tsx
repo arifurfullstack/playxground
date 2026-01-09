@@ -4,8 +4,9 @@ import { GlassCard } from '@/components/ui/glass-card';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { Bell, Volume2, VolumeX } from 'lucide-react';
+import { Bell, Volume2, VolumeX, LayoutTemplate, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+
 
 export interface AdminNotificationSettings {
   soundEnabled: boolean;
@@ -38,6 +39,7 @@ export const saveAdminNotificationSettings = (settings: AdminNotificationSetting
 };
 
 export default function AdminSettings() {
+
   const [settings, setSettings] = useState<AdminNotificationSettings>(getAdminNotificationSettings);
 
   const updateSettings = (partial: Partial<AdminNotificationSettings>) => {
@@ -165,6 +167,8 @@ export default function AdminSettings() {
             />
           </div>
         </GlassCard>
+
+
       </div>
     </AdminLayout>
   );

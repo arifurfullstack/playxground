@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Sparkles, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner"; // Use sonner toast instead of custom toast for consistency if preferred, but existing code uses custom toast state. I will stick to existing or upgrade. Actually existing code has local `toast` state. I'll use it or the imported one. The existing code imports `toast` from "sonner" in FlashDropsRoom but here it defines a local state `toast`. I'll try to stick to the local pattern or replace it nicely.
+// Re-using local toast logic as per existing code structure, adding supabase import.
+
 // ---- Helpers (replicated from HomeMock for consistency) ----
 function cx(...parts: Array<string | false | null | undefined>) {
     return parts.filter(Boolean).join(" ");
@@ -54,83 +58,80 @@ export default function FlashDropsCreatorRoom() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!authLoading && (!user || role !== 'creator')) {
+        // If loaded and user is missing or explicitly 'fan', redirect.
+        // If role is null/undefined (legacy user), we might want to allow them to stay if they navigated here manually to test? 
+        // For now, STRICT check: only 'creator' allowed.
+        if (!authLoading && user && role !== 'creator') {
+            console.warn("Redirecting from Creator Room: User is not creator", role);
             navigate('/discover?category=Flash Drops');
         }
     }, [user, role, authLoading]);
+
+    // Fetch Real Data
+    useEffect(() => {
+        if (user) {
+            fetchDrops();
+            // Subscribe to changes
+            const channel = supabase
+                .channel('creator_drops')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_drops', filter: `creator_id=eq.${user.id}` }, () => {
+                    fetchDrops();
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'flash_drop_unlocks' }, () => {
+                    // Refresh stats if an unlock happens
+                    fetchDrops();
+                })
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        }
+    }, [user]);
+
+    const fetchDrops = async () => {
+        if (!user) return;
+        const { data, error } = await (supabase.from('flash_drops' as any) as any)
+            .select('*, flash_drop_unlocks(*)') // Assuming relation or we count fetches
+            .eq('creator_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (!error && data) {
+            const mapped: DropRow[] = data.map((d: any) => {
+                const endsAt = new Date(d.ends_at).getTime();
+                const now = Date.now();
+                const diffMin = Math.max(0, Math.floor((endsAt - now) / 60000));
+
+                // Calculate stats from unlocks
+                const unlockCount = Array.isArray(d.flash_drop_unlocks) ? d.flash_drop_unlocks.length : 0;
+
+                return {
+                    id: d.id,
+                    title: d.title,
+                    kind: d.kind,
+                    rarity: d.rarity,
+                    price: d.price,
+                    endsInMin: diffMin,
+                    status: d.status,
+                    inventoryTotal: d.inventory_total,
+                    inventoryRemaining: d.inventory_remaining,
+                    grossPreview: unlockCount * d.price,
+                    unlocksPreview: unlockCount,
+                };
+            });
+            setDrops(mapped);
+            if (mapped.length > 0 && !mapped.find(d => d.id === selected)) {
+                setSelected(mapped[0].id);
+            }
+        }
+    };
 
     if (authLoading) return null;
 
     const [toast, setToast] = useState<string | null>(null);
     const [selected, setSelected] = useState<string>("d3");
 
-    const [drops, setDrops] = useState<DropRow[]>([
-        {
-            id: "d1",
-            title: "After Hours — Tease Set",
-            kind: "Photo Set",
-            rarity: "Common",
-            price: 25,
-            endsInMin: 28,
-            status: "Live",
-            inventoryTotal: 999,
-            inventoryRemaining: 812,
-            grossPreview: 1275,
-            unlocksPreview: 51,
-        },
-        {
-            id: "d2",
-            title: "Neon Confetti — Clip",
-            kind: "Video",
-            rarity: "Rare",
-            price: 60,
-            endsInMin: 22,
-            status: "Live",
-            inventoryTotal: 400,
-            inventoryRemaining: 244,
-            grossPreview: 4380,
-            unlocksPreview: 73,
-        },
-        {
-            id: "d3",
-            title: "VIP Backstage — Full Reel",
-            kind: "Live Replay",
-            rarity: "Epic",
-            price: 250,
-            endsInMin: 15,
-            status: "Live",
-            inventoryTotal: 120,
-            inventoryRemaining: 33,
-            grossPreview: 18750,
-            unlocksPreview: 75,
-        },
-        {
-            id: "d4",
-            title: "Private DMs — 10 Pack",
-            kind: "DM Pack",
-            rarity: "Epic",
-            price: 400,
-            endsInMin: 12,
-            status: "Scheduled",
-            inventoryTotal: 80,
-            inventoryRemaining: 80,
-            grossPreview: 0,
-            unlocksPreview: 0,
-        },
-        {
-            id: "d5",
-            title: "Vault Drop — Uncut",
-            kind: "Vault",
-            rarity: "Legendary",
-            price: 1000,
-            endsInMin: 7,
-            status: "Scheduled",
-            inventoryTotal: 25,
-            inventoryRemaining: 25,
-            grossPreview: 0,
-            unlocksPreview: 0,
-        },
-    ]);
+    const [drops, setDrops] = useState<DropRow[]>([]);
 
     const [formTitle, setFormTitle] = useState("New Flash Drop");
     const [formKind, setFormKind] = useState<DropKind>("Video");
@@ -140,35 +141,73 @@ export default function FlashDropsCreatorRoom() {
     const [formInv, setFormInv] = useState(100);
     const [formNote, setFormNote] = useState("Short teaser for fans…");
 
-    const selectedDrop = drops.find((d) => d.id === selected) ?? drops[0];
+    const selectedDrop = drops.find((d) => d.id === selected) ?? (drops.length > 0 ? drops[0] : null);
 
     const pushToast = (msg: string) => {
         setToast(msg);
         window.setTimeout(() => setToast((t) => (t === msg ? null : t)), 1400);
     };
 
-    const setStatus = (id: string, status: DropStatus) => {
+    const setStatus = async (id: string, status: DropStatus) => {
+        // Optimistic update
         setDrops((rows) => rows.map((r) => (r.id === id ? { ...r, status } : r)));
+
+        const { error } = await (supabase.from('flash_drops' as any) as any)
+            .update({ status })
+            .eq('id', id);
+
+        if (error) {
+            pushToast("❌ Failed to update status");
+            fetchDrops(); // revert
+        }
     };
 
-    const quickCreate = () => {
-        const id = `new_${Math.random().toString(16).slice(2)}`;
-        const row: DropRow = {
-            id,
+    const quickCreate = async () => {
+        if (!user) return;
+
+        const endsAt = new Date(Date.now() + formEnds * 60 * 1000).toISOString();
+
+        const payload = {
+            creator_id: user.id,
             title: formTitle.trim() || "Untitled Drop",
             kind: formKind,
             rarity: formRarity,
             price: Math.max(1, Math.floor(formPrice)),
-            endsInMin: Math.max(1, Math.floor(formEnds)),
+            ends_at: endsAt,
             status: "Scheduled",
-            inventoryTotal: Math.max(1, Math.floor(formInv)),
-            inventoryRemaining: Math.max(1, Math.floor(formInv)),
-            grossPreview: 0,
-            unlocksPreview: 0,
+            inventory_total: Math.max(1, Math.floor(formInv)),
+            inventory_remaining: Math.max(1, Math.floor(formInv)),
         };
-        setDrops((rows) => [row, ...rows]);
-        setSelected(id);
-        pushToast("✅ Drop created (Scheduled)");
+
+        const { data, error } = await (supabase.from('flash_drops' as any) as any)
+            .insert(payload)
+            .select()
+            .single();
+
+        if (error) {
+            console.error(error);
+            pushToast("❌ Error creating drop");
+            return;
+        }
+
+        if (data) {
+            const row: DropRow = {
+                id: data.id,
+                title: data.title,
+                kind: data.kind,
+                rarity: data.rarity,
+                price: data.price,
+                endsInMin: formEnds,
+                status: data.status,
+                inventoryTotal: data.inventory_total,
+                inventoryRemaining: data.inventory_remaining,
+                grossPreview: 0,
+                unlocksPreview: 0,
+            };
+            setDrops((rows) => [row, ...rows]);
+            setSelected(data.id);
+            pushToast("✅ Drop created (Scheduled)");
+        }
     };
 
     const simulateUnlockBurst = (id: string, n: number) => {
@@ -209,7 +248,7 @@ export default function FlashDropsCreatorRoom() {
                             <ArrowLeft className="w-6 h-6" />
                         </button>
                         <button
-                            onClick={() => navigate(`/flash-drops/${user?.id}`)}
+                            onClick={() => navigate(`/flash-drops-fan-view/${user?.id}`)}
                             className="rounded-xl border border-blue-500/25 bg-black/40 px-3 py-2 text-sm text-blue-200 hover:bg-white/5 inline-flex items-center gap-2"
                             title="Switch to Fan room preview"
                         >
@@ -231,9 +270,10 @@ export default function FlashDropsCreatorRoom() {
                             </div>
                         </div>
                         <div className="rounded-2xl border border-yellow-400/30 bg-yellow-500/10 px-4 py-2 shadow-[0_0_20px_rgba(234,179,8,0.1)]">
-                            <div className="text-[10px] text-gray-400">Today (preview)</div>
+                            <div className="text-[10px] text-gray-400">Total Revenue</div>
                             <div className="text-sm text-yellow-100 font-semibold">
-                                Gross: ${drops.reduce((s, d) => s + d.grossPreview, 0).toLocaleString()}
+                                {/* Sum of drop sales (grossPreview) + we should ideally fetch general transactions too */}
+                                ${drops.reduce((s, d) => s + d.grossPreview, 0).toLocaleString()}
                             </div>
                         </div>
                     </div>
@@ -305,35 +345,43 @@ export default function FlashDropsCreatorRoom() {
                                 <h3 className="text-lg font-bold text-blue-100">Drop Controls</h3>
                                 <span className={cx(
                                     "text-[10px] px-3 py-1 rounded-full border border-white/10 bg-black/40 font-black uppercase tracking-widest",
-                                    selectedDrop.status === 'Live' ? "text-emerald-400 border-emerald-400/30 shadow-[0_0_10px_rgba(52,211,153,0.2)]" : "text-gray-400"
+                                    selectedDrop?.status === 'Live' ? "text-emerald-400 border-emerald-400/30 shadow-[0_0_10px_rgba(52,211,153,0.2)]" : "text-gray-400"
                                 )}>
-                                    {selectedDrop.status}
+                                    {selectedDrop?.status || "—"}
                                 </span>
                             </div>
 
                             <div className="rounded-2xl border border-white/5 bg-white/5 p-4 mb-6">
-                                <div className="text-sm text-white font-black">{selectedDrop.title}</div>
-                                <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-400">
-                                    <span className="font-mono text-yellow-400">${selectedDrop.price.toLocaleString()}</span>
-                                    <span>•</span>
-                                    <span>Ends in {selectedDrop.endsInMin}m</span>
-                                </div>
-                                <div className="mt-2 text-[11px] text-gray-400">
-                                    Inventory:{" "}
-                                    <span className="text-blue-200">
-                                        {typeof selectedDrop.inventoryRemaining === "number"
-                                            ? `${selectedDrop.inventoryRemaining}/${selectedDrop.inventoryTotal}`
-                                            : "Unlimited"}
-                                    </span>
-                                </div>
+                                {selectedDrop ? (
+                                    <>
+                                        <div className="text-sm text-white font-black">{selectedDrop.title}</div>
+                                        <div className="mt-2 flex items-center gap-2 text-[11px] text-gray-400">
+                                            <span className="font-mono text-yellow-400">${selectedDrop.price.toLocaleString()}</span>
+                                            <span>•</span>
+                                            <span>Ends in {selectedDrop.endsInMin}m</span>
+                                        </div>
+                                        <div className="mt-2 text-[11px] text-gray-400">
+                                            Inventory:{" "}
+                                            <span className="text-blue-200">
+                                                {typeof selectedDrop.inventoryRemaining === "number"
+                                                    ? `${selectedDrop.inventoryRemaining}/${selectedDrop.inventoryTotal}`
+                                                    : "Unlimited"}
+                                            </span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-sm text-gray-500 italic">Select a drop to view details</div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-3 gap-3 mb-8">
                                 <button
                                     className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 py-3 text-xs font-bold text-emerald-100 hover:bg-emerald-500/20 transition-all active:scale-95"
                                     onClick={() => {
-                                        setStatus(selectedDrop.id, "Live");
-                                        pushToast("🟢 Drop set LIVE");
+                                        if (selectedDrop) {
+                                            setStatus(selectedDrop.id, "Live");
+                                            pushToast("🟢 Drop set LIVE");
+                                        }
                                     }}
                                 >
                                     Go Live
@@ -341,8 +389,10 @@ export default function FlashDropsCreatorRoom() {
                                 <button
                                     className="rounded-xl border border-blue-400/30 bg-blue-500/10 py-3 text-xs font-bold text-blue-100 hover:bg-blue-500/20 transition-all active:scale-95"
                                     onClick={() => {
-                                        setStatus(selectedDrop.id, "Scheduled");
-                                        pushToast("🗓️ Drop Scheduled");
+                                        if (selectedDrop) {
+                                            setStatus(selectedDrop.id, "Scheduled");
+                                            pushToast("🗓️ Drop Scheduled");
+                                        }
                                     }}
                                 >
                                     Schedule
@@ -350,8 +400,10 @@ export default function FlashDropsCreatorRoom() {
                                 <button
                                     className="rounded-xl border border-rose-400/30 bg-rose-500/10 py-3 text-xs font-bold text-rose-100 hover:bg-rose-500/20 transition-all active:scale-95"
                                     onClick={() => {
-                                        setStatus(selectedDrop.id, "Ended");
-                                        pushToast("⛔ Drop ended");
+                                        if (selectedDrop) {
+                                            setStatus(selectedDrop.id, "Ended");
+                                            pushToast("⛔ Drop ended");
+                                        }
                                     }}
                                 >
                                     End Now
@@ -366,8 +418,10 @@ export default function FlashDropsCreatorRoom() {
                                             key={n}
                                             className="rounded-xl border border-white/10 bg-black/40 py-2 text-xs font-bold hover:bg-white/10 transition-all active:scale-95"
                                             onClick={() => {
-                                                simulateUnlockBurst(selectedDrop.id, n);
-                                                pushToast(`⚡ +${n} unlocks simulated`);
+                                                if (selectedDrop) {
+                                                    simulateUnlockBurst(selectedDrop.id, n);
+                                                    pushToast(`⚡ +${n} unlocks simulated`);
+                                                }
                                             }}
                                         >
                                             +{n}

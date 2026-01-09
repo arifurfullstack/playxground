@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { GlassCard } from "@/components/ui/glass-card";
+import { MOCK_CONFESSIONS, MOCK_CONFESSIONS_CREATOR } from "@/data/mockConfessionsData";
 // NeonCard fallback
 function NeonCard({
     children,
@@ -64,9 +65,10 @@ export default function ConfessionsRoom() {
     const navigate = useNavigate();
     const { user, role } = useAuth();
 
-    const [loading, setLoading] = useState(true);
-    const [creator, setCreator] = useState<CreatorProfile | null>(null);
-    const [confessions, setConfessions] = useState<Confession[]>([]);
+    // OPTIMISTIC: Start with Mock Data
+    const [loading, setLoading] = useState(false); // No blocking load
+    const [creator, setCreator] = useState<CreatorProfile | null>(MOCK_CONFESSIONS_CREATOR as any);
+    const [confessions, setConfessions] = useState<Confession[]>(MOCK_CONFESSIONS as any);
     const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
     const [activeConfessionId, setActiveConfessionId] = useState<string | null>(null);
     const [walletSpent, setWalletSpent] = useState(0); // This would come from real wallet in prod
@@ -96,7 +98,7 @@ export default function ConfessionsRoom() {
 
     const fetchRoomData = async () => {
         try {
-            setLoading(true);
+            // setLoading(true); // Don't block UI with spinner
 
             // 1. Fetch Creator
             const { data: creatorData, error: creatorError } = await supabase

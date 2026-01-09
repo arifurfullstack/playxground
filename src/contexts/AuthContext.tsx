@@ -83,15 +83,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Defer Supabase calls with setTimeout
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
+          // Await profile fetch BEFORE setting loading to false
+          try {
+            // TIMEOUT SAFEGUARD: If profile fetch hangs > 3s, proceed anyway to show UI
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Auth Profile Timed Out")), 3000));
+            await Promise.race([
+              fetchProfile(session.user.id),
+              timeoutPromise
+            ]);
+          } catch (error) {
+            console.warn("Profile fetch warning (slow/failed):", error);
+            // We continue so the app doesn't hang on white screen
+          }
         } else {
           setProfile(null);
           setRole(null);
@@ -101,11 +109,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        try {
+          await fetchProfile(session.user.id);
+        } catch (error) {
+          console.error("Error fetching profile during init:", error);
+        }
       }
       setLoading(false);
     });

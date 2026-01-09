@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Heart, 
-  Gift, 
-  Star, 
-  Send, 
-  BadgeCheck, 
+import {
+  Heart,
+  Gift,
+  Star,
+  Send,
+  BadgeCheck,
   Sparkles,
   MessageCircle,
   Clock,
@@ -24,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { MOCK_CREATORS_SUGA, MOCK_REQUESTS } from '@/data/mockSugaData';
 
 interface Creator {
   id: string;
@@ -49,10 +50,11 @@ interface SugaRequest {
 export default function Suga4U() {
   const { user, loading: authLoading, profile, role, refreshProfile } = useAuth();
   const navigate = useNavigate();
-  const [subscribedCreators, setSubscribedCreators] = useState<Creator[]>([]);
-  const [myRequests, setMyRequests] = useState<SugaRequest[]>([]);
+  // OPTIMISTIC: Start with Mock data
+  const [subscribedCreators, setSubscribedCreators] = useState<Creator[]>(MOCK_CREATORS_SUGA);
+  const [myRequests, setMyRequests] = useState<SugaRequest[]>(MOCK_REQUESTS as any);
   const [incomingRequests, setIncomingRequests] = useState<SugaRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // No local blocking load
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null);
   const [requestMessage, setRequestMessage] = useState('');
@@ -69,7 +71,7 @@ export default function Suga4U() {
 
   const fetchData = async () => {
     if (!user) return;
-    setLoading(true);
+    // setLoading(true); // Don't block UI
 
     // Fetch subscribed creators (for fans)
     if (role === 'fan') {
@@ -101,7 +103,7 @@ export default function Suga4U() {
 
     // For now, we'll use a simple approach - store requests in transactions with a special type
     // In a real app, you'd have a dedicated suga_requests table
-    
+
     setLoading(false);
   };
 
@@ -382,7 +384,7 @@ export default function Suga4U() {
                 <span className="neon-text-pink">Send Suga4U Request</span>
               </DialogTitle>
             </DialogHeader>
-            
+
             {selectedCreator && (
               <div className="space-y-4 pt-2">
                 {/* Creator Info */}
@@ -425,11 +427,10 @@ export default function Suga4U() {
                       <button
                         key={amount}
                         onClick={() => setTipAmount(amount.toString())}
-                        className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${
-                          tipAmount === amount.toString()
+                        className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${tipAmount === amount.toString()
                             ? 'border-neon-pink bg-neon-pink/20 text-neon-pink'
                             : 'border-border hover:border-neon-pink/50 text-muted-foreground'
-                        }`}
+                          }`}
                       >
                         ${amount}
                       </button>

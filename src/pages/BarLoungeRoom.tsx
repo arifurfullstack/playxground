@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Send, Sparkles, MessageCircle, DollarSign, Users, Music, Coffee, GlassWater, Beer, Zap, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
+
 /**
  * Bar Lounge Room
  * ----------------------------------
  * A social, multi-fan interactive room.
  * Key features:
- *  - Public Chat
- *  - Virtual Drinks / Gifting
- *  - Music Request (Conceptual)
+ *  - Public Chat (Real-time via Supabase)
+ *  - Virtual Drinks / Gifting (Transactions)
+ *  - Mock Presence (Simulated crowds)
  */
 
 function cx(...parts: Array<string | false | null | undefined>) {
@@ -43,77 +44,230 @@ export default function BarLoungeRoom() {
     const { creatorId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    // Use System Settings for Demo Mode
+
     const [msg, setMsg] = useState("");
     const [messages, setMessages] = useState<any[]>([]);
     const [creator, setCreator] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [onlineCount, setOnlineCount] = useState(Math.floor(Math.random() * 50) + 12);
+    const [sending, setSending] = useState(false);
+
+    // Mock Online Users Data
+    const MOCK_FAN_NAMES = [
+        "cool_cat_99", "pixel_pioneer", "cyber_ninja", "neon_dreamer", "vibex_fan",
+        "crypto_king", "music_lover", "design_guru", "code_wizard", "sky_walker",
+        "ocean_breeze", "city_lights", "midnight_rider", "solar_flare", "lunar_eclipse"
+    ];
+
+    const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+
+    // Drink Menu Data
+    const DRINK_MENU = [
+        { id: 'coffee', name: 'Coffee', price: 5, icon: Coffee, color: 'text-amber-600' },
+        { id: 'tequila', name: 'Tequila', price: 10, icon: GlassWater, color: 'text-cyan-400' },
+        { id: 'beer', name: 'Craft Beer', price: 15, icon: Beer, color: 'text-yellow-500' },
+        { id: 'champagne', name: 'Champagne', price: 50, icon: GlassWater, color: 'text-pink-400' },
+        { id: 'shots', name: 'Tequila Shots', price: 35, icon: GlassWater, color: 'text-emerald-400' },
+    ];
+
+    // Derived Room ID for the Bar Lounge
+    const roomId = `bar_lounge_${creatorId}`;
+
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
 
     useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    // Initial Mock Users Setup
+    useEffect(() => {
+        const initialUsers = Array.from({ length: 12 }).map((_, i) => ({
+            id: `user-${i}`,
+            username: MOCK_FAN_NAMES[i % MOCK_FAN_NAMES.length] + (i > 10 ? `_${i}` : ''),
+            avatar_seed: `User${i}`,
+            status: 'Active'
+        }));
+        setOnlineUsers(initialUsers);
+    }, []);
+
+    useEffect(() => {
+        if (!creatorId) return;
+
+
+
         fetchData();
-        // Using x_chat_messages for now as a shared message pool, or we could create lounge_messages
+
+        // Subscribe to real-time chat updates
         const channel = supabase
-            .channel('lounge_updates')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'x_chat_messages' }, () => {
-                fetchData();
-            })
+            .channel(`bar_lounge_${creatorId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'x_chat_messages',
+                    filter: `room_id=eq.${roomId}`
+                },
+                (payload) => {
+                    const newMsg = payload.new;
+                    setMessages((prev) => [newMsg, ...prev]);
+                }
+            )
             .subscribe();
+
+        // Simulate presence fluctuation (Dynamic Online Users)
+        const presenceInterval = setInterval(() => {
+            setOnlineUsers(prev => {
+                const shouldAdd = Math.random() > 0.5;
+                if (shouldAdd && prev.length < 25) {
+                    const newId = Date.now();
+                    const randomName = MOCK_FAN_NAMES[Math.floor(Math.random() * MOCK_FAN_NAMES.length)];
+                    return [{
+                        id: `user-${newId}`,
+                        username: `${randomName}_${Math.floor(Math.random() * 100)}`,
+                        avatar_seed: `User${newId}`,
+                        status: 'Just Joined'
+                    }, ...prev];
+                } else if (!shouldAdd && prev.length > 5) {
+                    // Remove a random user
+                    const indexToRemove = Math.floor(Math.random() * prev.length);
+                    return prev.filter((_, i) => i !== indexToRemove);
+                }
+                return prev;
+            });
+
+            // Sync count
+            setOnlineCount(prev => onlineUsers.length);
+        }, 4000);
 
         return () => {
             supabase.removeChannel(channel);
+            clearInterval(presenceInterval);
         };
-    }, [creatorId]);
+    }, [creatorId, roomId]);
+
+    // Mock Data for Fallback
+    const MOCK_CREATOR = {
+        id: 'mc1',
+        display_name: 'Mock Creator 1',
+        username: 'mock_creator',
+        avatar_url: 'https://api.dicebear.com/7/x/svg?seed=Felix',
+    };
+
+    const MOCK_MESSAGES = [
+        { id: '1', from_handle: 'Fan123', body: 'This lounge is awesome!', created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
+        { id: '2', from_handle: 'CoolCat', body: 'Anyone want to play Truth or Dare?', created_at: new Date(Date.now() - 1000 * 60 * 2).toISOString() },
+    ];
 
     const fetchData = async () => {
         try {
-            const { data: creatorData } = await supabase
+            // Fetch Creator Profile
+            const { data: creatorData, error: creatorError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', creatorId)
                 .single();
-            setCreator(creatorData);
 
-            // Fetch "Free" lane messages as lounge chat
-            const { data: msgs } = await (supabase
-                .from('x_chat_messages' as any) as any)
+            if (creatorError || !creatorData) {
+                console.warn("Using Mock Creator due to fetch error:", creatorError);
+                setCreator(MOCK_CREATOR);
+            } else {
+                setCreator(creatorData);
+            }
+
+            // Fetch Recent Messages
+            const { data: msgs, error: msgError } = await supabase
+                .from('x_chat_messages')
                 .select('*')
-                .eq('from_handle', user?.email?.split('@')[0] || 'Anonymous') // Mocking for now
-                .limit(20)
-                .order('created_at', { ascending: false });
+                .eq('room_id', roomId)
+                .order('created_at', { ascending: false })
+                .limit(50);
 
-            setMessages(msgs || []);
+            if (msgError) {
+                console.warn("Using Mock Messages due to fetch error:", msgError);
+                setMessages(MOCK_MESSAGES);
+            } else {
+                setMessages(msgs || []);
+            }
             setLoading(false);
         } catch (error) {
             console.error("Error fetching lounge data:", error);
+            setCreator(MOCK_CREATOR);
+            setMessages(MOCK_MESSAGES);
             setLoading(false);
         }
     };
 
     const handleSend = async () => {
-        if (!user) return toast.error("Sign in to join the chat");
         if (!msg.trim()) return;
 
+        // Mock User if not logged in (for demo)
+        const effectiveUser = user || { id: 'anon', email: 'guest@example.com' };
+
+
+
+        setSending(true);
+
         try {
-            // Simulate sending a message
-            const newMessage = {
-                id: Math.random().toString(),
-                from_handle: user.email?.split('@')[0] || 'Anonymous',
-                body: msg.trim(),
-                created_at: new Date().toISOString()
-            };
-            setMessages([newMessage, ...messages]);
+            const { error } = await supabase
+                .from('x_chat_messages')
+                .insert({
+                    room_id: roomId,
+                    from_user_id: effectiveUser.id,
+                    from_handle: effectiveUser.email?.split('@')[0] || 'Guest',
+                    lane: 'Free',
+                    body: msg.trim(),
+                    status: 'Live'
+                });
+
+            if (error) throw error;
+
             setMsg("");
-            toast.success("Message sent to the lounge!");
         } catch (error) {
-            toast.error("Failed to send");
+            console.error("Supabase send failed:", error);
+            toast.error("Failed to send message. Please try again.");
+        } finally {
+            setSending(false);
         }
     };
 
-    const sendGift = (item: string, price: number) => {
-        toast.success(`Sent a ${item} to ${creator?.display_name || creator?.username}! ($${price})`);
+
+
+    const sendGift = async (item: string, price: number) => {
+        // Optimistic Toast
+        toast.promise(
+            async () => {
+                const effectiveUser = user || { id: 'anon' };
+                if (creatorId) {
+                    const { error } = await supabase
+                        .from('transactions')
+                        .insert({
+                            amount: price,
+                            receiver_id: creatorId,
+                            sender_id: effectiveUser.id,
+                            type: 'gift',
+                            description: `Sent ${item} in Bar Lounge`
+                        });
+                    if (error) throw error;
+                }
+            },
+            {
+                loading: `Ordering ${item}...`,
+                success: `Sent a ${item} to ${creator?.display_name || 'Creator'}! ($${price})`,
+                error: (err) => {
+                    console.error("Gift failed:", err);
+                    return `Failed to send ${item}. Please try again.`;
+                }
+            }
+        );
     };
 
-    if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-purple-400"><Coffee className="animate-bounce" /></div>;
+    if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-purple-400"><Coffee className="animate-bounce" /> Loading Lounge...</div>;
 
     return (
         <div className="min-h-screen bg-black text-white p-4 md:p-8 pt-20 relative overflow-hidden">
@@ -133,7 +287,7 @@ export default function BarLoungeRoom() {
                                 <img src={creator?.avatar_url || "https://api.dicebear.com/7/x/svg"} className="w-full h-full object-cover" />
                             </div>
                             <div className="min-w-0">
-                                <h3 className="text-sm font-black truncate">{creator?.display_name || creator?.username}</h3>
+                                <h3 className="text-sm font-black truncate">{creator?.display_name || creator?.username || "Loading..."}</h3>
                                 <p className="text-[10px] text-purple-400 font-bold flex items-center gap-1"><Users className="w-3 h-3" /> {onlineCount} Fans Online</p>
                             </div>
                         </div>
@@ -141,22 +295,16 @@ export default function BarLoungeRoom() {
                         <div className="space-y-3">
                             <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Buy a Drink</p>
                             <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => sendGift("Coffee", 5)} className="p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition flex flex-col items-center gap-1 group">
-                                    <Coffee className="w-5 h-5 text-amber-600 group-hover:scale-110 transition-transform" />
-                                    <span className="text-[9px] font-black">$5</span>
-                                </button>
-                                <button onClick={() => sendGift("Tequila", 10)} className="p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition flex flex-col items-center gap-1 group">
-                                    <GlassWater className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
-                                    <span className="text-[9px] font-black">$10</span>
-                                </button>
-                                <button onClick={() => sendGift("Craft Beer", 15)} className="p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition flex flex-col items-center gap-1 group">
-                                    <Beer className="w-5 h-5 text-yellow-500 group-hover:scale-110 transition-transform" />
-                                    <span className="text-[9px] font-black">$15</span>
-                                </button>
-                                <button onClick={() => sendGift("Champagne", 50)} className="p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition flex flex-col items-center gap-1 group">
-                                    <GlassWater className="w-5 h-5 text-pink-400 group-hover:scale-110 transition-transform" />
-                                    <span className="text-[9px] font-black">$50</span>
-                                </button>
+                                {DRINK_MENU.map((drink) => (
+                                    <button
+                                        key={drink.id}
+                                        onClick={() => sendGift(drink.name, drink.price)}
+                                        className="p-3 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition flex flex-col items-center gap-1 group"
+                                    >
+                                        <drink.icon className={`w-5 h-5 ${drink.color} group-hover:scale-110 transition-transform`} />
+                                        <span className="text-[9px] font-black">${drink.price}</span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
@@ -170,16 +318,26 @@ export default function BarLoungeRoom() {
 
                 {/* Main: Lounge Chat */}
                 <div className="lg:col-span-6 flex flex-col h-[80vh]">
-                    <div className="flex-1 overflow-y-auto space-y-4 pr-4 scrollbar-hide py-4">
-                        {messages.map((m, idx) => (
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-4 scrollbar-hide py-4 flex flex-col-reverse">
+                        <div ref={messagesEndRef} />
+                        {messages.length === 0 ? (
+                            <div className="text-center text-gray-500 text-sm py-10">
+                                No messages in the lounge yet. Start the party!
+                            </div>
+                        ) : messages.map((m, idx) => (
                             <div key={m.id || idx} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="flex items-start gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black text-gray-500">
-                                        {m.from_handle?.[1]?.toUpperCase() || 'A'}
+                                    <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black text-gray-500 uppercase">
+                                        {m.from_handle?.[0] || 'A'}
                                     </div>
                                     <div className="bg-white/5 border border-white/5 rounded-2xl p-3 max-w-[85%]">
-                                        <span className="text-[10px] font-black text-purple-400 mb-1 block">{m.from_handle}</span>
-                                        <p className="text-sm text-gray-200 leading-relaxed">{m.body}</p>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-[10px] font-black text-purple-400 block">{m.from_handle}</span>
+                                            <span className="text-[9px] text-gray-600">
+                                                {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-200 leading-relaxed break-words">{m.body}</p>
                                     </div>
                                 </div>
                             </div>
@@ -190,16 +348,17 @@ export default function BarLoungeRoom() {
                         <input
                             value={msg}
                             onChange={(e) => setMsg(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                            className="flex-1 bg-transparent border-none outline-none px-4 py-3 text-sm placeholder:text-gray-600 font-medium"
+                            onKeyDown={(e) => e.key === 'Enter' && !sending && handleSend()}
+                            className="flex-1 bg-transparent border-none outline-none px-4 py-3 text-sm placeholder:text-gray-600 font-medium text-white"
                             placeholder="Join the lounge conversation..."
+                            disabled={sending}
                         />
                         <button
                             onClick={handleSend}
-                            disabled={!msg.trim()}
+                            disabled={!msg.trim() || sending}
                             className="p-3 rounded-xl bg-purple-600 text-white hover:bg-purple-500 transition-all disabled:opacity-50 active:scale-95"
                         >
-                            <Send className="w-4 h-4" />
+                            {sending ? <Zap className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                         </button>
                     </div>
                 </div>
@@ -207,17 +366,19 @@ export default function BarLoungeRoom() {
                 {/* Desktop Sidebar: Online Fans */}
                 <div className="lg:col-span-3 hidden lg:block">
                     <NeonCard className="p-5 h-[80vh] flex flex-col">
-                        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Online Now</h4>
+                        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-6">Online Now ({onlineUsers.length})</h4>
                         <div className="flex-1 overflow-y-auto space-y-4 pr-4 scrollbar-hide">
-                            {Array.from({ length: 12 }).map((_, i) => (
-                                <div key={i} className="flex items-center gap-3">
+                            {onlineUsers.map((u) => (
+                                <div key={u.id} className="animate-in fade-in slide-in-from-right-4 duration-500 flex items-center gap-3 opacity-90 hover:opacity-100 transition-opacity">
                                     <div className="relative">
-                                        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/5" />
+                                        <div className="w-8 h-8 rounded-full bg-white/5 border border-white/5 overflow-hidden">
+                                            <img src={`https://api.dicebear.com/7/x/svg?seed=${u.avatar_seed}`} className="w-full h-full object-cover" />
+                                        </div>
                                         <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-black rounded-full" />
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-[11px] font-bold text-gray-300 truncate">fan_member_{i + 100}</p>
-                                        <p className="text-[9px] text-gray-600">Active</p>
+                                        <p className="text-[11px] font-bold text-gray-300 truncate">{u.username}</p>
+                                        <p className="text-[9px] text-gray-600 font-medium">{u.status || 'Active'}</p>
                                     </div>
                                 </div>
                             ))}

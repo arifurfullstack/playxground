@@ -961,6 +961,50 @@ export type Database = {
           }
         ]
       }
+      x_chat_messages: {
+        Row: {
+          id: string
+          room_id: string
+          from_user_id: string
+          from_handle: string | null
+          lane: string
+          body: string
+          paid_amount_cents: number | null
+          status: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          from_user_id: string
+          from_handle?: string | null
+          lane?: string
+          body: string
+          paid_amount_cents?: number | null
+          status?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          room_id?: string
+          from_user_id?: string
+          from_handle?: string | null
+          lane?: string
+          body?: string
+          paid_amount_cents?: number | null
+          status?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "x_chat_messages_from_user_id_fkey"
+            columns: ["from_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

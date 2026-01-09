@@ -4,6 +4,7 @@ import { ArrowLeft, Send, Sparkles, MessageCircle, DollarSign, Lock, Zap, Clock,
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { MOCK_XCHAT_CREATOR, MOCK_XCHAT_MESSAGES } from "@/data/mockXChatData";
 
 /**
  * X Chat — Fan Room
@@ -47,10 +48,11 @@ export default function XChatRoom() {
     const [msg, setMsg] = useState("");
     const [amount, setAmount] = useState(5);
     const [busy, setBusy] = useState(false);
-    const [room, setRoom] = useState<any>(null);
-    const [creator, setCreator] = useState<any>(null);
-    const [messages, setMessages] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [room, setRoom] = useState<any>({ id: "mock_room_id" }); // Mock room ID
+    // OPTIMISTIC: Start with Mock Data
+    const [creator, setCreator] = useState<any>(MOCK_XCHAT_CREATOR);
+    const [messages, setMessages] = useState<any[]>(MOCK_XCHAT_MESSAGES);
+    const [loading, setLoading] = useState(false); // No blocking load
 
     useEffect(() => {
         if (role === 'creator') {

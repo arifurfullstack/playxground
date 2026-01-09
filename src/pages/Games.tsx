@@ -8,6 +8,7 @@ import { NeonButton } from '@/components/ui/neon-button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { MOCK_GAME_ROOMS, MOCK_LEADERBOARD } from '@/data/mockGamesData';
 interface GameRoom {
   id: string;
   creator_id: string;
@@ -29,8 +30,9 @@ interface LeaderboardEntry {
 
 export default function Games() {
   const { user, loading, role, profile } = useAuth();
-  const [rooms, setRooms] = useState<GameRoom[]>([]);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  // OPTIMISTIC: Start with Mock data
+  const [rooms, setRooms] = useState<GameRoom[]>(MOCK_GAME_ROOMS as any);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(MOCK_LEADERBOARD as any);
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -250,7 +252,7 @@ export default function Games() {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border/50 flex justify-between items-center">
                       <span className="text-xs sm:text-sm text-neon-yellow">
                         Waiting for player...
@@ -289,31 +291,29 @@ export default function Games() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className={`flex items-center gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg ${
-                      index === 0 ? 'bg-neon-yellow/10 border border-neon-yellow/30' : ''
-                    }`}
+                    className={`flex items-center gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg ${index === 0 ? 'bg-neon-yellow/10 border border-neon-yellow/30' : ''
+                      }`}
                   >
                     {/* Rank */}
-                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base shrink-0 ${
-                      index === 0 
-                        ? 'bg-neon-yellow/20 text-neon-yellow' 
-                        : index === 1 
-                        ? 'bg-gray-300/20 text-gray-300' 
-                        : index === 2 
-                        ? 'bg-orange-400/20 text-orange-400'
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
+                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base shrink-0 ${index === 0
+                        ? 'bg-neon-yellow/20 text-neon-yellow'
+                        : index === 1
+                          ? 'bg-gray-300/20 text-gray-300'
+                          : index === 2
+                            ? 'bg-orange-400/20 text-orange-400'
+                            : 'bg-muted text-muted-foreground'
+                      }`}>
                       {index === 0 ? <Crown className="w-4 h-4 sm:w-5 sm:h-5" /> : index + 1}
                     </div>
 
                     {/* Avatar */}
-                    <div 
+                    <div
                       className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-neon-pink to-neon-purple flex items-center justify-center text-base sm:text-lg font-bold shrink-0 cursor-pointer"
                       onClick={() => navigate(`/creator/${entry.user_id}`)}
                     >
                       {entry.avatar_url ? (
-                        <img 
-                          src={entry.avatar_url} 
+                        <img
+                          src={entry.avatar_url}
                           alt={entry.username}
                           className="w-full h-full rounded-full object-cover"
                         />
@@ -324,7 +324,7 @@ export default function Games() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p 
+                      <p
                         className="font-semibold text-sm sm:text-base text-foreground truncate cursor-pointer hover:text-neon-pink transition-colors"
                         onClick={() => navigate(`/creator/${entry.user_id}`)}
                       >

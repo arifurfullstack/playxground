@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Sparkles, Link as LinkIcon, Edit, Copy, Archive, CheckCircle, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { GlassCard } from "@/components/ui/glass-card";
+import { MOCK_CONFESSIONS } from "@/data/mockConfessionsData";
 
 // NeonCard fallback
 function NeonCard({
@@ -59,10 +60,15 @@ const TIER_META: Record<ConfTier, { price: number; tone: string }> = {
 export default function ConfessionsStudio() {
     const navigate = useNavigate();
     const { user, role, loading: authLoading } = useAuth();
+    // const user = { id: 'mc1' }; const role = 'creator'; const authLoading = false; // TEMP TEST
 
-    const [loading, setLoading] = useState(true);
-    const [items, setItems] = useState<ConfessionItem[]>([]);
+    const [loading, setLoading] = useState(false);
     const [filter, setFilter] = useState<ConfStatus>("Published");
+
+    // OPTIMISTIC: Initialize with mocks
+    const [items, setItems] = useState<ConfessionItem[]>(
+        (MOCK_CONFESSIONS as any).map((c: any) => ({ ...c, status: c.status === 'active' ? 'Published' : 'Draft' }))
+    );
 
     // Editor State
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -73,45 +79,9 @@ export default function ConfessionsStudio() {
     const [fullText, setFullText] = useState(""); // content_url (stored as text for Text type)
     const [fileName, setFileName] = useState<string | null>(null); // For mock file upload
 
-    useEffect(() => {
-        if (!authLoading) {
-            if (!user || role !== 'creator') {
-                navigate('/discover?category=Confessions');
-                return;
-            }
-            fetchItems();
-        }
-    }, [user, role, authLoading]);
-
-    if (authLoading) return null;
-
-    const fetchItems = async () => {
-        try {
-            setLoading(true);
-            const { data, error } = await (supabase
-                .from("confessions" as any) as any)
-                .select("*")
-                .eq("creator_id", user?.id)
-                .order("created_at", { ascending: false });
-
-            if (error) throw error;
-
-            // Cast data to ensure status is typed correctly (migration helper)
-            const formatted = (data || []).map(d => ({
-                ...d,
-                status: (d.status === 'active' ? 'Published' : d.status === 'hidden' ? 'Draft' : d.status === 'deleted' ? 'Archived' : d.status) as ConfStatus
-            }));
-
-            setItems(formatted);
-        } catch (error: any) {
-            console.error("Error fetching items:", error);
-            toast.error("Failed to load confessions");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const visibleItems = useMemo(() => items.filter(i => i.status === filter), [items, filter]);
+
+
 
     // Editor Actions
     const resetEditor = () => {
@@ -122,6 +92,34 @@ export default function ConfessionsStudio() {
         setTeaser("");
         setFullText("");
         setFileName(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+
+
+    // File Upload Logic
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validation
+        if (type === 'Voice' && !file.type.startsWith('audio/')) {
+            toast.error('Please select an audio file for Voice type');
+            return;
+        }
+        if (type === 'Video' && !file.type.startsWith('video/')) {
+            toast.error('Please select a video file for Video type');
+            return;
+        }
+
+        // Simulate Upload
+        setFileName(file.name);
+        // Create a local URL for preview/playback in this session
+        const objectUrl = URL.createObjectURL(file);
+        setFullText(objectUrl); // We store URL in fullText for non-Text types based on current logic
+        toast.success("File selected ready for upload");
     };
 
     const loadItem = (item: ConfessionItem) => {
@@ -134,9 +132,27 @@ export default function ConfessionsStudio() {
             setFullText(item.content_url || "");
             setFileName(null);
         } else {
-            setFullText("");
-            setFileName(item.content_url || "Existing File");
+            setFullText(item.content_url || ""); // content_url holds the file path/url
+            setFileName(item.content_url ? "Existing File" : null);
         }
+    };
+
+
+
+    useEffect(() => {
+        if (!authLoading) {
+            if (!user || role !== 'creator') {
+                navigate('/discover?category=Confessions');
+                return;
+            }
+            // fetchItems(); // No fetch needed for initial state
+        }
+    }, [user, role, authLoading]);
+
+    const fetchItems = async () => {
+        // Simulated refresh
+        setLoading(true);
+        setTimeout(() => setLoading(false), 500);
     };
 
     const handleSave = async (targetStatus: ConfStatus) => {
@@ -147,38 +163,31 @@ export default function ConfessionsStudio() {
         }
 
         try {
-            const payload = {
+            const newItem: ConfessionItem = {
+                id: editingId || `mock_id_${Date.now()}`,
                 creator_id: user.id,
                 title: title.trim(),
                 preview_text: teaser.trim(),
                 tier,
                 type,
                 price: TIER_META[tier].price,
+                content_url: type === 'Text' ? fullText : (fileName || 'placeholder.mp4'),
                 status: targetStatus,
-                content_url: type === 'Text' ? fullText : (fileName || 'placeholder_asset_id'),
+                created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             };
 
-            let error;
-            if (editingId) {
-                const { error: upError } = await (supabase
-                    .from("confessions" as any) as any)
-                    .update(payload)
-                    .eq("id", editingId);
-                error = upError;
-            } else {
-                const { error: insError } = await (supabase
-                    .from("confessions" as any) as any)
-                    .insert(payload);
-                error = insError;
-            }
-
-            if (error) throw error;
+            setItems(prev => {
+                if (editingId) {
+                    return prev.map(item => item.id === editingId ? newItem : item);
+                }
+                return [newItem, ...prev];
+            });
 
             toast.success(editingId ? `Updated (${targetStatus})` : `Created (${targetStatus})`);
-            fetchItems(); // Refresh
+
             if (targetStatus === 'Published' || targetStatus === 'Draft') {
-                resetEditor(); // Clear only on clean save/publish
+                resetEditor();
             }
 
         } catch (err: any) {
@@ -189,22 +198,15 @@ export default function ConfessionsStudio() {
 
     const handleDuplicate = async (item: ConfessionItem) => {
         try {
-            const { error } = await (supabase
-                .from("confessions" as any) as any)
-                .insert({
-                    creator_id: user?.id,
-                    title: `${item.title} (Copy)`,
-                    preview_text: item.preview_text,
-                    tier: item.tier,
-                    type: item.type,
-                    price: item.price,
-                    content_url: item.content_url,
-                    status: 'Draft'
-                });
-
-            if (error) throw error;
+            const copy: ConfessionItem = {
+                ...item,
+                id: `copy_${Date.now()}`,
+                title: `${item.title} (Copy)`,
+                status: 'Draft',
+                updated_at: new Date().toISOString()
+            };
+            setItems(prev => [copy, ...prev]);
             toast.success("Duplicated to Drafts");
-            fetchItems();
         } catch (err) {
             toast.error("Failed to duplicate");
         }
@@ -212,18 +214,20 @@ export default function ConfessionsStudio() {
 
     const handleArchive = async (id: string) => {
         try {
-            const { error } = await (supabase
-                .from("confessions" as any) as any)
-                .update({ status: 'Archived' })
-                .eq("id", id);
-
-            if (error) throw error;
+            setItems(prev => prev.map(item => item.id === id ? { ...item, status: 'Archived' } : item));
             toast.success("Archived item");
-            fetchItems();
         } catch (err) {
             toast.error("Failed to archive");
         }
     };
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center text-rose-500">
+                <Sparkles className="w-6 h-6 animate-pulse" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-black text-white pb-20">
@@ -336,14 +340,36 @@ export default function ConfessionsStudio() {
                                             placeholder="The full secret..."
                                         />
                                     ) : (
-                                        <div className="flex items-center justify-between gap-2 border border-rose-400/20 rounded-xl p-3 bg-black/40">
-                                            <span className="text-sm text-gray-300 truncate max-w-[150px]">{fileName || "No file selected"}</span>
-                                            <button
-                                                onClick={() => setFileName(`upload_${Date.now()}.${type === 'Voice' ? 'm4a' : 'mp4'}`)}
-                                                className="flex items-center gap-2 text-xs text-rose-200 hover:text-white"
-                                            >
-                                                <LinkIcon className="w-3 h-3" /> Select File
-                                            </button>
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between gap-2 border border-rose-400/20 rounded-xl p-3 bg-black/40">
+                                                <span className="text-sm text-gray-300 truncate max-w-[200px]">
+                                                    {fileName || `No ${type.toLowerCase()} selected`}
+                                                </span>
+                                                <input
+                                                    type="file"
+                                                    ref={fileInputRef}
+                                                    onChange={handleFileSelect}
+                                                    accept={type === 'Voice' ? "audio/*" : "video/*"}
+                                                    className="hidden"
+                                                />
+                                                <button
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="flex items-center gap-2 text-xs text-rose-200 hover:text-white border border-rose-500/20 rounded-lg px-3 py-1.5 bg-rose-500/10"
+                                                >
+                                                    <LinkIcon className="w-3 h-3" /> Select File
+                                                </button>
+                                            </div>
+
+                                            {/* Preview Player */}
+                                            {fileName && fullText.startsWith('blob:') && (
+                                                <div className="rounded-xl overflow-hidden border border-white/10 bg-black/50">
+                                                    {type === 'Video' ? (
+                                                        <video src={fullText} controls className="w-full h-48 object-cover" />
+                                                    ) : (
+                                                        <audio src={fullText} controls className="w-full p-2" />
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Index from "./pages/Index";
+import HomeReimagined from "./pages/HomeReimagined";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import Feed from "./pages/Feed";
@@ -46,6 +47,8 @@ import XChatCreatorView from "./pages/XChatCreatorView";
 import XChatRoom from "./pages/XChatRoom";
 import BarLoungeRoom from "./pages/BarLoungeRoom";
 
+
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -56,9 +59,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+
             <NotificationProvider>
               <Routes>
-                <Route path="/" element={<HomeMock />} />
+                <Route path="/" element={<HomeReimagined />} />
+                <Route path="/old-home" element={<HomeMock />} />
                 <Route path="/explore" element={<Feed />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
@@ -93,7 +98,8 @@ const App = () => (
 
                 <Route path="/confessions/:creatorId" element={<ConfessionsRoom />} />
                 <Route path="/confessions-studio" element={<ConfessionsStudio />} />
-                <Route path="/flash-drops/:creatorId" element={<FlashDropsRoom />} />
+                <Route path="/flash-drops-fan-view/:creatorId" element={<FlashDropsRoom />} />
+                <Route path="/flash-drops/:creatorId" element={<FlashDropsRoom />} /> {/* Legacy/Simple Access */}
                 <Route path="/flash-drops-creator" element={<FlashDropsCreatorRoom />} />
                 <Route path="/xchat-creator" element={<XChatCreatorView />} />
                 <Route path="/x-chat/:creatorId" element={<XChatRoom />} />
@@ -101,11 +107,12 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </NotificationProvider>
+
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
-  </ThemeProvider>
+  </ThemeProvider >
 );
 
 export default App;
